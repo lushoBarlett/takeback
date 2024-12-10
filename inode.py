@@ -1,95 +1,119 @@
-class INode {
-    def __init__(self):
-        self._name = None
-        self._parent = None
+from __future__ import annotations
+from typing import Union
+
+
+class INode:
+    def __init__(self, name: str, parent: Union[INode, None] = None):
+        self._name = name
+        self._parent = parent
         self._children = []
 
-    def name(self):
+    def name(self) -> str:
         return self._name
 
-    def set_name(self, name: str):
+    def set_name(self, name: str) -> None:
         self._name = name
 
-    def parent(self):
+    def parent(self) -> Union[INode, None]:
         return self._parent
 
-    def set_parent(self, parent: INode|None):
+    def set_parent(self, parent: Union[INode, None]) -> None:
         self._parent = parent
 
-    def children(self):
+    def children(self) -> list[INode]:
         return self._children
 
-    def add_child(self, child: INode):
+    def add_child(self, child: INode) -> None:
         self._children.append(child)
         child._parent = self
 
-    def remove_child(self, child: INode):
+    def remove_child(self, child: INode) -> None:
         self._children.remove(child)
         child._parent = None
-}
 
 
-def _build_path_recursive(node: INode):
+def _build_path_recursive(node: INode) -> list[str]:
     path = []
     while node is not None:
-        path.append(node.name())
+        path.append(node._name)
         node = node.parent()
     path.reverse()
     return path
 
 
-class Folder(INode) {
-    def __init__(self):
-        super().__init__()
+class Folder(INode):
+    def __init__(self, name: str, parent: Union[INode, None] = None):
+        super().__init__(name, parent)
 
-    def name(self):
-        return "/".join(__build_path_recursive(self) + [""])
+    def fullname(self) -> str:
+        return "/".join(_build_path_recursive(self) + [""])
 
-    def files(self):
-        return child for child in self.children() if isinstance(child, File)
+    def files(self) -> list[File]:
+        return [child for child in self.children() if isinstance(child, File)]
 
-    def __validate_type(self, inode: INode, t: type):
+    def __validate_type(self, inode: INode, t: type) -> None:
         if not isinstance(inode, t):
             raise ValueError(f"inode must be of type {t}")
 
         if inode.parent() is not None:
             raise ValueError("inode already has a parent")
 
-    def add_file(self, file: File):
+    def add_file(self, file: File) -> None:
         self.__validate_type(file, File)
         self.add_child(file)
         file.set_parent(self)
 
-    def folders(self):
-        return child for child in self.children() if isinstance(child, Folder)
+    def folders(self) -> list[Folder]:
+        return [child for child in self.children() if isinstance(child, Folder)]
 
-    def add_folder(self, folder: Folder):
+    def add_folder(self, folder: Folder) -> None:
         self.__validate_type(folder, Folder)
         self.add_child(folder)
         folder.set_parent(self)
-}
+
+    def __repr__(self):
+        return (
+            self._name + "/\n" +
+            "\n".join([
+                "  |  " + child._name + ("/" if isinstance(child, Folder) else "")
+                for child in self.children()
+            ])
+        )
 
 
-class File(INode) {
-    def __init__(self):
-        super().__init__()
+class File(INode):
+    def __init__(self, name: str, parent: Union[INode, None] = None):
+        super().__init__(name, parent)
         self._metadata = None
+        self._original = None
 
-    def name(self):
-        return "/".join(__build_path_recursive(self))
+    def fullname(self) -> str:
+        return "/".join(_build_path_recursive(self))
 
-    def add_child(self, child: INode):
+    def copy_contents_from(self, file_path: str) -> None:
+        self._original = file_path
+
+    def contents(self) -> bytes:
+        if self._original is None:
+            raise ValueError("No original file to copy contents from")
+
+        with open(self._original, "rb") as f:
+            return f.read()
+
+    def add_child(self, child: INode) -> None:
         pass
 
-    def children(self):
+    def children(self) -> list[INode]:
         return []
 
-    def merge(self, md: Metadata):
+    def merge(self, md: Metadata) -> None:
         self._metadata = md
-}
+
+    def __repr__(self):
+        return self._name
 
 
-class Metadata(INode) {
+class Metadata(INode):
     def __init__(self):
         super().__init__()
         self._data = {}
@@ -99,10 +123,9 @@ class Metadata(INode) {
 
     def value(self, key: str) -> str:
         return self._data[key]
-}
 
 
-class FileIterator {
+class FileIterator:
     def __init__(self, folder: Folder):
         self._folder = folder
 
@@ -118,4 +141,3 @@ class FileIterator {
 
     def __next__(self):
         return next(self._iterator)
-}

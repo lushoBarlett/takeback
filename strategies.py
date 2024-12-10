@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from inode import Folder
 
 
 class OutputStrategy(ABC):
@@ -7,31 +8,33 @@ class OutputStrategy(ABC):
     def go(self, folder: Folder) -> Folder:
         pass
 
+    def __repr__(self):
+        return self.__class__.__name__
+
 
 class RemoveOldFolderStructure(OutputStrategy):
 
     def go(self, folder: Folder) -> Folder:
         # implement
-        pass
+        return folder
 
 
 class DateFileNames(OutputStrategy):
 
     def go(self, folder: Folder) -> Folder:
         # implement
-        pass
+        return folder
 
 
 class GeographicalAppendFileNames(OutputStrategy):
 
     def go(self, folder: Folder) -> Folder:
         # implement
-        pass
+        return folder
 
 
 class FolderPerYearAndMonth(OutputStrategy):
 
     def go(self, folder: Folder) -> Folder:
         # implement
-        pass
-
+        return folder
