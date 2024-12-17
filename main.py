@@ -22,3 +22,5 @@ if __name__ == "__main__":
     if not success:
         CLI.warning(message)
         sys.exit(2)
+
+    CLI.out("Done")
