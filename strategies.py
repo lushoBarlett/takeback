@@ -12,13 +12,6 @@ class OutputStrategy(ABC):
         return self.__class__.__name__
 
 
-class RemoveOldFolderStructure(OutputStrategy):
-
-    def go(self, folder: Folder) -> Folder:
-        # implement
-        return folder
-
-
 class DateFileNames(OutputStrategy):
 
     def go(self, folder: Folder) -> Folder:

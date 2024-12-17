@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from typing import Union
 
 
@@ -114,9 +115,13 @@ class File(INode):
 
 
 class Metadata(INode):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, name: str, parent: Union[INode, None] = None):
+        super().__init__(name, parent)
         self._data = {}
+
+    def read_from(self, name: str) -> None:
+        with open(name, "r") as f:
+            self._data = json.load(f)
 
     def properties(self) -> list[str]:
         return list(self._data.keys())
