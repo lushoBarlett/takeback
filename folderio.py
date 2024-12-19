@@ -2,6 +2,7 @@ import os, sys
 from typing import Tuple
 from inode import Folder, File, Metadata
 from cli import CLI
+from exif import write_exif_metadata
 
 
 class GoogleTakeoutReader:
@@ -24,6 +25,7 @@ class GoogleTakeoutReader:
         dirs = [name for name in entries if os.path.isdir(os.path.join(folder_path, name))]
 
         prepared_files = {}
+        merged_files = {}
         for name in normal_files:
             CLI.vanishing(f"@ Reading file {name}")
             file = File(name)
@@ -31,6 +33,7 @@ class GoogleTakeoutReader:
             if name in prepared_files:
                 CLI.warning(f"File {name} found with duplicate name, we don't support this yet")
             prepared_files[name] = file
+            merged_files[name] = False
             folder.add_file(file)
 
         for name in meta_files:
@@ -41,8 +44,14 @@ class GoogleTakeoutReader:
             referred_name = name[:-5]
             if referred_name in prepared_files:
                 prepared_files[referred_name].merge(meta)
+                merged_files[referred_name] = True
             else:
                 CLI.warning(f"Metadata file {name} has no corresponding file")
+
+        for name, merged in merged_files.items():
+            if not merged:
+                CLI.warning(f"File {name} has no metadata")
+                prepared_files[name].merge(Metadata(""))
 
         for name in dirs:
             CLI.vanishing(f"@ Entering folder {name}")
@@ -57,18 +66,24 @@ class FileSystemWriter:
         CLI.out(f"Copying folder {folder.fullname()}")
 
         if GoogleTakeoutReader.exists(folder.fullname()):
-            return False, f"Folder {folder.name()} already exists"
+            return False, f"Folder {folder.fullname()} already exists"
 
         os.mkdir(folder.fullname())
 
         for file in folder.files():
-            CLI.vanishing(f"@ Writing file {file.name()}")
+            CLI.out(f"Writing file {file.fullname()}")
 
-            if os.path.exists(file.fullname()):
-                return False, f"File {file.name()} already exists"
+            i = 1
+            while os.path.exists(file.fullname()):
+                no_ext = file._name.split(".")[0] # removes the extension
+                no_number = " ".join(no_ext.split(" ")[:-1]) # removes the last word
+                file.set_name(no_number + f" ({i})." + file._name.split(".")[1])
+                i += 1
 
             with open(file.fullname(), "wb") as f:
                 f.write(file.contents())
+
+            write_exif_metadata(file, file._metadata)
 
         for subfolder in folder.folders():
             r = FileSystemWriter.write(subfolder)

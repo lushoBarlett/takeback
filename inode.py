@@ -1,6 +1,6 @@
 from __future__ import annotations
 import json
-from typing import Union
+from typing import Union, Iterable
 
 
 class INode:
@@ -75,10 +75,7 @@ class Folder(INode):
     def __repr__(self):
         return (
             self._name + "/\n" +
-            "\n".join([
-                "  |  " + child._name + ("/" if isinstance(child, Folder) else "")
-                for child in self.children()
-            ])
+            "\n".join(f"{child}" for child in self.children())
         )
 
 
@@ -90,6 +87,12 @@ class File(INode):
 
     def fullname(self) -> str:
         return "/".join(_build_path_recursive(self))
+
+    def extesion(self) -> str:
+        if "." not in self._name:
+            return ""
+
+        return self._name.split(".")[-1]
 
     def copy_contents_from(self, file_path: str) -> None:
         self._original = file_path
@@ -123,11 +126,29 @@ class Metadata(INode):
         with open(name, "r") as f:
             self._data = json.load(f)
 
-    def properties(self) -> list[str]:
-        return list(self._data.keys())
+    def timestamp(self) -> int:
+        if "photoTakenTime" not in self._data or "timestamp" not in self._data["photoTakenTime"]:
+            return 0.0
 
-    def value(self, key: str) -> str:
-        return self._data[key]
+        return int(self._data["photoTakenTime"]["timestamp"])
+
+    def longitude(self) -> float:
+        if "geoDataExif" not in self._data or "longitude" not in self._data["geoDataExif"]:
+            return 0.0
+
+        return self._data["geoDataExif"]["longitude"]
+
+    def latitude(self) -> float:
+        if "geoDataExif" not in self._data or "latitude" not in self._data["geoDataExif"]:
+            return 0.0
+
+        return self._data["geoDataExif"]["latitude"]
+
+    def altitude(self) -> float:
+        if "geoDataExif" not in self._data or "altitude" not in self._data["geoDataExif"]:
+            return 0.0
+
+        return self._data["geoDataExif"]["altitude"]
 
 
 class FileIterator:
@@ -136,13 +157,18 @@ class FileIterator:
 
     def __iter__(self):
         def dfs(node: INode):
-            yield node
+            if isinstance(node, File):
+                yield node
+
             for child in node.children():
                 yield from dfs(child)
 
         self._iterator = dfs(self._folder)
 
-        return self
+        return self._iterator
 
     def __next__(self):
         return next(self._iterator)
+
+    def __len__(self):
+        return sum(1 for _ in self)

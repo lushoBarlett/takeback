@@ -12,6 +12,16 @@ class CLI:
         print("\033[93m" + message + "\033[0m")
         CLI._last_message_was_vanishing = False
 
+    def error(message: str) -> None:
+        if CLI._last_message_was_vanishing:
+            CLI.line_up()
+            CLI.clear_line()
+        print("\033[91m" + message + "\033[0m")
+
+    def fatal(message: str) -> None:
+        CLI.error(message)
+        sys.exit(1)
+
     def vanishing(message: str) -> None:
         if CLI._last_message_was_vanishing:
             CLI.line_up()
